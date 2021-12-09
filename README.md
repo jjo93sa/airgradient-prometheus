@@ -1,5 +1,15 @@
 # AirGradient - Prometheus WiFi Sketch
 
+## Fork changes
+This fork from [geerlingguy](https://github.com/geerlingguy/airgradient-prometheus.git) is modified in the following ways:
+
+- Send WiFi RSSI in dBm as part of the Prometheus scrape
+- Display the WiFi RSSI in dBm on the screen
+- Fix a couple of typos
+- Add more detail in the metrics descriptions
+
+## Original README.md below
+
 [![CI](https://github.com/geerlingguy/airgradient-prometheus/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/geerlingguy/airgradient-prometheus/actions/workflows/ci.yml)
 
 AirGradient has a [DIY air sensor](https://www.airgradient.com/diy/). I built one (actually, more than one). I want to integrate sensor data into my in-home Prometheus instance and graph the data in Grafana.
