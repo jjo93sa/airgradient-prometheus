@@ -106,11 +106,29 @@ String GenerateMetrics() {
   String idString = "{id=\"" + String(deviceId) + "\",mac=\"" + WiFi.macAddress().c_str() + "\"}";
 
   if (hasPM) {
-    int stat = ag.getPM2_Raw();
+    int stat = ag.getPM1_Raw();
+
+    message += "# HELP pm01 Particulate Matter PM1.0, in micrograms per cubic metre\n";
+    message += "# TYPE pm01 gauge\n";
+    message += "pm01";
+    message += idString;
+    message += String(stat);
+    message += "\n";
+
+    stat = ag.getPM2_Raw();
 
     message += "# HELP pm02 Particulate Matter PM2.5, in micrograms per cubic metre\n";
     message += "# TYPE pm02 gauge\n";
     message += "pm02";
+    message += idString;
+    message += String(stat);
+    message += "\n";
+
+    stat = ag.getPM10_Raw();
+
+    message += "# HELP pm10 Particulate Matter PM10, in micrograms per cubic metre\n";
+    message += "# TYPE pm10 gauge\n";
+    message += "pm10";
     message += idString;
     message += String(stat);
     message += "\n";
@@ -199,29 +217,41 @@ void updateScreen(long now) {
     switch (counter) {
       case 0:
         if (hasPM) {
+          int stat = ag.getPM1_Raw();
+          showTextRectangle("PM1",String(stat),false);
+        }
+        break;
+      case 1:
+        if (hasPM) {
           int stat = ag.getPM2_Raw();
           showTextRectangle("PM2",String(stat),false);
         }
         break;
-      case 1:
+      case 2:
+        if (hasPM) {
+          int stat = ag.getPM10_Raw();
+          showTextRectangle("PM10",String(stat),false);
+        }
+        break;
+      case 3:
         if (hasCO2) {
           int stat = ag.getCO2_Raw();
           showTextRectangle("CO2", String(stat), false);
         }
         break;
-      case 2:
+      case 4:
         if (hasSHT) {
           TMP_RH stat = ag.periodicFetchData();
           showTextRectangle("TMP", String(stat.t, 1) + "C", false);
         }
         break;
-      case 3:
+      case 5:
         if (hasSHT) {
           TMP_RH stat = ag.periodicFetchData();
           showTextRectangle("HUM", String(stat.rh) + "%", false);
         }
         break;
-      case 4:
+      case 6:
         if (WiFi.status() == WL_CONNECTED) {
           char wifi_dbm_reading[12];
           ltoa(WiFi.RSSI(), wifi_dbm_reading, 10);
@@ -230,7 +260,7 @@ void updateScreen(long now) {
         break;
     }
     counter++;
-    if (counter > 4) counter = 0;
+    if (counter > 6) counter = 0;
     lastUpdate = millis();
   }
 }
