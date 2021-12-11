@@ -11,7 +11,14 @@
 #include <Wire.h>
 #include "SSD1306Wire.h"
 
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+#include "Adafruit_SGP30.h"
+
+
 AirGradient ag = AirGradient();
+Adafruit_BME280 bme; // I2C
+Adafruit_SGP30 sgp;  // I2C
 
 // Config ----------------------------------------------------------------------
 
@@ -21,11 +28,13 @@ const char* deviceId = "";
 // Hardware options for AirGradient DIY sensor.
 const bool hasPM = true;
 const bool hasCO2 = true;
-const bool hasSHT = true;
+const bool hasSHT = false;
+const bool hasBME = true;
+const bool hasSGP = true;
 
 // WiFi and IP connection info.
-const char* ssid = "PleaseChangeMe";
-const char* password = "PleaseChangeMe";
+const char* ssid = "InterruptingSheep";
+const char* password = "EasySqueezyCheezyPeaz";
 const int port = 9926;
 
 // Uncomment the line below to configure a static IP address.
@@ -60,6 +69,8 @@ void setup() {
   if (hasPM) ag.PMS_Init();
   if (hasCO2) ag.CO2_Init();
   if (hasSHT) ag.TMP_RH_Init(0x44);
+  if (hasBME) bme.begin(0x76, &Wire);
+  if (hasSGP) sgp.begin();
 
   // Set static IP address if configured.
   #ifdef staticip
@@ -104,6 +115,8 @@ void loop() {
 String GenerateMetrics() {
   String message = "";
   String idString = "{id=\"" + String(deviceId) + "\",mac=\"" + WiFi.macAddress().c_str() + "\"}";
+  float temperature = 0.0;
+  float humidity = 0.0;
 
   if (hasPM) {
     int stat = ag.getPM1_Raw();
@@ -161,7 +174,56 @@ String GenerateMetrics() {
     message += idString;
     message += String(stat.rh);
     message += "\n";
+
+    temperature = stat.t;
+    humidity = stat.rh;
   }
+
+  if (hasBME) {
+    temperature = bme.readTemperature();
+    message += "# HELP atmp Temperature, in degrees Celsius\n";
+    message += "# TYPE atmp gauge\n";
+    message += "atmp";
+    message += idString;
+    message += String(temperature);
+    message += "\n";
+
+    message += "# HELP pres Pressure, in hPa\n";
+    message += "# TYPE pres gauge\n";
+    message += "pres";
+    message += idString;
+    message += String(bme.readPressure() / 100.0F);
+    message += "\n";
+
+    humidity = bme.readHumidity();
+    message += "# HELP rhum Relative humidity, in percent\n";
+    message += "# TYPE rhum gauge\n";
+    message += "rhum";
+    message += idString;
+    message += String(humidity);
+    message += "\n";
+  }
+
+  if (hasSGP) {
+    sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
+
+    if ( sgp.IAQmeasure()) {
+      message += "# HELP tvoc total volatile organic compounds, in ppb\n";
+      message += "# TYPE tvoc gauge\n";
+      message += "tvoc";
+      message += idString;
+      message += String(sgp.TVOC);
+      message += "\n";
+
+      message += "# HELP eco2 equivalent CO2 value, in ppm\n";
+      message += "# TYPE eco2 gauge\n";
+      message += "eco2";
+      message += idString;
+      message += String(sgp.eCO2);
+      message += "\n";
+    }
+  }
+
 
   if (WiFi.status() == WL_CONNECTED) {
     char wifi_dbm_reading[12];
@@ -263,4 +325,14 @@ void updateScreen(long now) {
     if (counter > 6) counter = 0;
     lastUpdate = millis();
   }
+}
+/* return absolute humidity [mg/m^3] with approximation formula
+* @param temperature [°C]
+* @param humidity [%RH]
+*/
+uint32_t getAbsoluteHumidity(float temperature, float humidity) {
+    // approximation formula from Sensirion SGP30 Driver Integration chapter 3.15
+    const float absoluteHumidity = 216.7f * ((humidity / 100.0f) * 6.112f * exp((17.62f * temperature) / (243.12f + temperature)) / (273.15f + temperature)); // [g/m^3]
+    const uint32_t absoluteHumidityScaled = static_cast<uint32_t>(1000.0f * absoluteHumidity); // [mg/m^3]
+    return absoluteHumidityScaled;
 }
