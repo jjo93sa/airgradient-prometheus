@@ -33,8 +33,8 @@ const bool hasBME = true;
 const bool hasSGP = true;
 
 // WiFi and IP connection info.
-const char* ssid = "InterruptingSheep";
-const char* password = "EasySqueezyCheezyPeaz";
+const char* ssid = "PleaswChangeMe";
+const char* password = "PleaseChangeMe";
 const int port = 9926;
 
 // Uncomment the line below to configure a static IP address.
@@ -326,6 +326,7 @@ void updateScreen(long now) {
     lastUpdate = millis();
   }
 }
+
 /* return absolute humidity [mg/m^3] with approximation formula
 * @param temperature [°C]
 * @param humidity [%RH]
