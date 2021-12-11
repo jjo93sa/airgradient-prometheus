@@ -7,6 +7,7 @@ This fork from [geerlingguy](https://github.com/geerlingguy/airgradient-promethe
 - Display the WiFi RSSI in dBm on the screen
 - Fix a couple of typos
 - Add more detail in the metrics descriptions
+- Configure BME280 and SGP30 sensors
 
 ## Original README.md below
 
