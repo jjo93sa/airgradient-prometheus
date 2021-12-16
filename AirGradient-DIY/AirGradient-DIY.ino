@@ -23,17 +23,17 @@ Adafruit_SGP30 sgp;  // I2C
 // Config ----------------------------------------------------------------------
 
 // Optional.
-const char* deviceId = "";
+const char* deviceId = "PleaseChangeMe";
 
 // Hardware options for AirGradient DIY sensor.
 const bool hasPM = true;
 const bool hasCO2 = true;
-const bool hasSHT = false;
-const bool hasBME = true;
-const bool hasSGP = true;
+const bool hasSHT = true;
+const bool hasBME = false;
+const bool hasSGP = false;
 
 // WiFi and IP connection info.
-const char* ssid = "PleaswChangeMe";
+const char* ssid = "PleaseChangeMe";
 const char* password = "PleaseChangeMe";
 const int port = 9926;
 
