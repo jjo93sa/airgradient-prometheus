@@ -28,9 +28,9 @@ const char* deviceId = "PleaseChangeMe";
 // Hardware options for AirGradient DIY sensor.
 const bool hasPM = true;
 const bool hasCO2 = true;
-const bool hasSHT = true;
-const bool hasBME = false;
-const bool hasSGP = false;
+const bool hasSHT = false;
+const bool hasBME = true;
+const bool hasSGP = true;
 
 // WiFi and IP connection info.
 const char* ssid = "PleaseChangeMe";
@@ -264,7 +264,7 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   if (small) {
-    display.setFont(ArialMT_Plain_16);
+    display.setFont(ArialMT_Plain_10);
   } else {
     display.setFont(ArialMT_Plain_24);
   }
@@ -280,49 +280,86 @@ void updateScreen(long now) {
       case 0:
         if (hasPM) {
           int stat = ag.getPM1_Raw();
-          showTextRectangle("PM1",String(stat),false);
+          showTextRectangle("PM1",String(stat) + " ug/m³",true);
         }
         break;
       case 1:
         if (hasPM) {
           int stat = ag.getPM2_Raw();
-          showTextRectangle("PM2",String(stat),false);
+          showTextRectangle("PM2.5 ",String(stat) + " ug/m³",true);
         }
         break;
       case 2:
         if (hasPM) {
           int stat = ag.getPM10_Raw();
-          showTextRectangle("PM10",String(stat),false);
+          showTextRectangle("PM10",String(stat) + " ug/m³",true);
         }
         break;
       case 3:
         if (hasCO2) {
           int stat = ag.getCO2_Raw();
-          showTextRectangle("CO2", String(stat), false);
+          showTextRectangle("CO2",String(stat) + " ppm",true);
         }
         break;
-      case 4:
-        if (hasSHT) {
-          TMP_RH stat = ag.periodicFetchData();
-          showTextRectangle("TMP", String(stat.t, 1) + "C", false);
+      case 4: {
+          String tempVal;
+          if (hasSHT) {
+            TMP_RH stat = ag.periodicFetchData();
+            tempVal = String(stat.t,1);
+          } else if (hasBME) {
+            float temperature = bme.readTemperature();
+            tempVal = String(temperature,1);
+          } else {
+            tempVal = "0";
+          }
+          showTextRectangle("Temperature",tempVal + " °C",true);
         }
         break;
-      case 5:
-        if (hasSHT) {
-          TMP_RH stat = ag.periodicFetchData();
-          showTextRectangle("HUM", String(stat.rh) + "%", false);
+      case 5: {
+          String message = "";
+          if (hasSHT) {
+            TMP_RH stat = ag.periodicFetchData();
+            message = String(stat.rh);
+          } else if (hasBME) {
+            float humidity = bme.readHumidity();
+            message = String(humidity,1);
+          }
+          showTextRectangle("Humidity",message + " %",true);
         }
         break;
-      case 6:
+      case 6: {
+          String message = "";
+          if (hasBME) {
+            float pressure = bme.readPressure() / 100.0F;
+            message = String(pressure,1);
+            showTextRectangle("Pressure",message + " hPa",true);
+          }
+        }
+        break;
+      case 7: {
+          String message = "";
+          if (hasSGP) {
+            sgp.IAQmeasure();
+            message = String(sgp.TVOC);
+            showTextRectangle("TVOC",message + " ppb",true);
+          }
+        }
+        break;
+      case 8:
         if (WiFi.status() == WL_CONNECTED) {
           char wifi_dbm_reading[12];
           ltoa(WiFi.RSSI(), wifi_dbm_reading, 10);
-          showTextRectangle("RSSI", String(wifi_dbm_reading) + "dBm", true);
+          showTextRectangle("RSSI",String(wifi_dbm_reading) + " dBm",true);
+        }
+        break;
+      case 9:
+        if (WiFi.status() == WL_CONNECTED) {
+          showTextRectangle("IP address",WiFi.localIP().toString(),true);
         }
         break;
     }
     counter++;
-    if (counter > 6) counter = 0;
+    if (counter > 9) counter = 0;
     lastUpdate = millis();
   }
 }
