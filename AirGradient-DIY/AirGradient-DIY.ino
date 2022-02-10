@@ -15,10 +15,12 @@
 #include <Adafruit_BME280.h>
 #include "Adafruit_SGP30.h"
 
+#include "radSens1v2.h"
 
 AirGradient ag = AirGradient();
-Adafruit_BME280 bme; // I2C
-Adafruit_SGP30 sgp;  // I2C
+Adafruit_BME280 bme; // I2C 0x77
+Adafruit_SGP30 sgp;  // I2C 0x58
+ClimateGuard_RadSens1v2 radSens(RS_DEFAULT_I2C_ADDRESS); // I2C 0x66
 
 // Config ----------------------------------------------------------------------
 
@@ -31,6 +33,7 @@ const bool hasCO2 = true;
 const bool hasSHT = false;
 const bool hasBME = true;
 const bool hasSGP = true;
+const bool hasGMT = true;
 
 // WiFi and IP connection info.
 const char* ssid = "PleaseChangeMe";
@@ -71,6 +74,7 @@ void setup() {
   if (hasSHT) ag.TMP_RH_Init(0x44);
   if (hasBME) bme.begin(0x76, &Wire);
   if (hasSGP) sgp.begin();
+  if (hasGMT) radSens.radSens_init();
 
   // Set static IP address if configured.
   #ifdef staticip
@@ -117,6 +121,8 @@ String GenerateMetrics() {
   String idString = "{id=\"" + String(deviceId) + "\",mac=\"" + WiFi.macAddress().c_str() + "\"}";
   float temperature = 0.0;
   float humidity = 0.0;
+  float radIntensity = 0.0;
+  int   radCount = 0;
 
   if (hasPM) {
     int stat = ag.getPM1_Raw();
@@ -224,6 +230,34 @@ String GenerateMetrics() {
     }
   }
 
+  if (hasGMT) {
+    radIntensity = radSens.getRadIntensyDyanmic(); /*Returns radiation intensity (dynamic period T < 123 sec).*/
+
+    message += "# HELP radD Radiation Intensity, over < 123 s in micro roentgen per hour\n";
+    message += "# TYPE radD gauge\n";
+    message += "radD";
+    message += idString;
+    message += String(radIntensity);
+    message += "\n";
+
+    radIntensity = radSens.getRadIntensyStatic(); /*Returns radiation intensity (static period T = 500 sec).*/
+
+    message += "# HELP radS Radiation Intensity, over 500s in micro roentgen per hour\n";
+    message += "# TYPE radS gauge\n";
+    message += "radS";
+    message += idString;
+    message += String(radIntensity);
+    message += "\n";
+
+    radCount = radSens.getNumberOfPulses(); /*Returns the accumulated number of pulses registered by the GM since last reading*/
+
+    message += "# HELP radP GM Radiation Pulses, counted since power on.\n";
+    message += "# TYPE radP gauge\n";
+    message += "radP";
+    message += idString;
+    message += String(radCount);
+    message += "\n";
+}
 
   if (WiFi.status() == WL_CONNECTED) {
     char wifi_dbm_reading[12];
@@ -345,21 +379,43 @@ void updateScreen(long now) {
           }
         }
         break;
-      case 8:
+      case 8: {
+          String message = "";
+          if (hasGMT) {
+            message = String(radSens.getRadIntensyDyanmic());
+            showTextRectangle("Rad Dynamic",message + " uR/h",true);
+        }
+      }
+        break;
+      case 9: {
+          String message = "";
+          if (hasGMT) {
+            message = String(radSens.getRadIntensyStatic());
+            showTextRectangle("Rad Static",message + " uR/h",true);
+          } }
+        break;
+      case 10: {
+          String message = "";
+          if (hasGMT) {
+            message = String(radSens.getNumberOfPulses());
+            showTextRectangle("Rad Pulse",message + " count",true);
+        }}
+        break;
+      case 11:
         if (WiFi.status() == WL_CONNECTED) {
           char wifi_dbm_reading[12];
           ltoa(WiFi.RSSI(), wifi_dbm_reading, 10);
           showTextRectangle("RSSI",String(wifi_dbm_reading) + " dBm",true);
         }
         break;
-      case 9:
+      case 12:
         if (WiFi.status() == WL_CONNECTED) {
           showTextRectangle("IP address",WiFi.localIP().toString(),true);
         }
         break;
     }
     counter++;
-    if (counter > 9) counter = 0;
+    if (counter > 12) counter = 0;
     lastUpdate = millis();
   }
 }
